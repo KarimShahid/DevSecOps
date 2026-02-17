@@ -1,0 +1,29 @@
+name: "Semgrep: SAST"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  semgrep:
+    name: Run Semgrep
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    permissions:
+      contents: read
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        run: semgrep scan -q --sarif --config p/owasp-top-ten > semgrep-results.sarif
+
+      - name: Upload SARIF as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-results
+          path: semgrep-results.sarif
+        if: success() || failure()
