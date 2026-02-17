@@ -1,29 +1,59 @@
+# name: Semgrep
+
+# on:
+#   pull_request: {}
+#   workflow_dispatch: {}
+#   push:
+#     branches: ["master", "main"]
+
+# jobs:
+#   semgrep_scan:
+#     name: semgrep/ci
+#     runs-on: ubuntu-latest
+#     container:
+#       image: semgrep/semgrep
+#     if: github.actor != 'dependabot[bot]'
+#     permissions:
+#       contents: read
+#       actions: read
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+
+#       - name: Perform Semgrep Analysis
+#         run: semgrep scan -q --sarif --config auto ./sast/app.py > semgrep-results.sarif
+
+#       - name: Save SARIF results as artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: semgrep-scan-results
+#           path: semgrep-results.sarif
+#         if: success() || failure()
+
+
 name: "Semgrep: SAST"
 
 on:
+  workflow_dispatch: {}
   push:
-    branches: ["main"]
-  pull_request:
+    branches: 
+      - main
 
 jobs:
-  semgrep:
-    name: Run Semgrep
+  semgrep_scan:
+    name: semgrep/ci
     runs-on: ubuntu-latest
     container:
       image: semgrep/semgrep
+    if: github.actor != 'dependabot[bot]'
     permissions:
       contents: read
-    if: github.actor != 'dependabot[bot]'
+      actions: read
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Semgrep
-        run: semgrep scan -q --sarif --config p/owasp-top-ten > semgrep-results.sarif
-
-      - name: Upload SARIF as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-results
-          path: semgrep-results.sarif
-        if: success() || failure()
+      - name: Perform Semgrep Analysis
+        run: semgrep ci
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
