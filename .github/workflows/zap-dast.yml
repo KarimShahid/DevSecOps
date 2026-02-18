@@ -35,11 +35,11 @@ jobs:
 
       - name: ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
+        continue-on-error: true        # prevents the known zap_scan artifact bug from failing the pipeline
         with:
           target: 'http://localhost:3000'
           fail_action: false
           allow_issue_writing: false
-          artifact_name: ''
 
       - name: Upload ZAP Reports
         if: always()
