@@ -1,0 +1,55 @@
+name: DAST - ZAP Baseline Scan on Juice Shop
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dast:
+    name: ZAP Baseline Scan
+    runs-on: ubuntu-latest
+
+    services:
+      juice-shop:
+        image: bkimminich/juice-shop:latest
+        ports:
+          - 3000:3000
+        options: >-
+          --health-cmd "wget -qO- http://localhost:3000 || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 30s
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Wait for Juice Shop
+        run: |
+          echo "Waiting for Juice Shop to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000 > /dev/null; then
+              echo "Juice Shop is up!"
+              break
+            fi
+            echo "Attempt $i: not ready yet, waiting 5s..."
+            sleep 5
+          done
+
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:3000'
+          fail_action: false
+
+      - name: Upload ZAP Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-reports
+          path: |
+            report_html.html
+            report_json.json
+            report_xml.xml
+            report_sarif.sarif
+          retention-days: 30
