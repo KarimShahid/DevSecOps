@@ -30,11 +30,15 @@ jobs:
             sleep 5
           done
 
+      - name: Fix workspace permissions for ZAP
+        run: chmod a+w ${{ github.workspace }}
+
       - name: ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'http://localhost:3000'
           fail_action: false
+          allow_issue_writing: false
 
       - name: Upload ZAP Reports
         if: always()
