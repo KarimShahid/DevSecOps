@@ -1,4 +1,4 @@
-name: DAST - ZAP Baseline Scan on Juice Shop
+name: "Zap: DAST"
 
 on:
   workflow_dispatch:
