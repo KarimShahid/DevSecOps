@@ -1,0 +1,122 @@
+name: Trivy Container Security Scan
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  #     - develop
+  #   paths:
+  #     - 'container-security/**'   # Only trigger when container-security files change
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'container-security/**'
+  workflow_dispatch:              # Allow manual trigger
+
+jobs:
+
+  # ──────────────────────────────────────────────
+  # JOB 1: Scan all config files in container-security/
+  # Covers: Dockerfile + docker-compose.yml
+  # ──────────────────────────────────────────────
+  scan-container-config:
+    name: Trivy - Scan Container Config
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Scan container-security/ (Table Output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: container-security/
+          format: table
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: 0             # Show all findings, don't fail yet
+
+      - name: Generate JSON Report
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: container-security/
+          format: json
+          output: trivy-config-results.json
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: 0
+
+      - name: Upload Config Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-config-report
+          path: trivy-config-results.json
+          retention-days: 30
+
+      - name: Gate - Fail on CRITICAL Findings
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: container-security/
+          format: table
+          severity: CRITICAL
+          exit-code: 1
+
+  # ──────────────────────────────────────────────
+  # JOB 2: Build image locally and scan for CVEs
+  # Build context mirrors compose: context: .
+  # platform: linux/amd64 matches your compose file
+  # ──────────────────────────────────────────────
+  scan-image:
+    name: Trivy - Scan Built Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t song-of-the-day:${{ github.sha }} \
+            ./container-security
+
+      - name: Scan Image (Table Output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: song-of-the-day:${{ github.sha }}
+          format: table
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: 0
+
+      - name: Generate Image JSON Report
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: song-of-the-day:${{ github.sha }}
+          format: json
+          output: trivy-image-results.json
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: 0
+
+      - name: Upload Image Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-image-report
+          path: trivy-image-results.json
+          retention-days: 30
+
+      - name: Gate - Fail on CRITICAL CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: song-of-the-day:${{ github.sha }}
+          format: table
+          severity: CRITICAL
+          exit-code: 1
+          ignore-unfixed: true      # Ignore CVEs with no fix available yet
