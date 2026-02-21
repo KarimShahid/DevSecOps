@@ -2,11 +2,23 @@ name: "Zap: DAST"
 
 on:
   workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of scan to run'
+        required: true
+        default: 'baseline'
+        type: choice
+        options:
+          - baseline
+          - full
+          - both
 
 jobs:
-  dast:
+  # ── Baseline Scan (passive, ~3-5 mins) ──────────────────────────────────
+  baseline:
     name: ZAP Baseline Scan
     runs-on: ubuntu-latest
+    if: ${{ inputs.scan_type == 'baseline' || inputs.scan_type == 'both' }}
 
     services:
       juice-shop:
@@ -35,17 +47,68 @@ jobs:
 
       - name: ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
-        continue-on-error: true        # prevents the known zap_scan artifact bug from failing the pipeline
+        continue-on-error: true
         with:
           target: 'http://localhost:3000'
           fail_action: false
           allow_issue_writing: false
 
-      - name: Upload ZAP Reports
+      - name: Upload Baseline Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: zap-reports
+          name: zap-baseline-reports
+          path: |
+            report_html.html
+            report_json.json
+            report_xml.xml
+            report_sarif.sarif
+          retention-days: 30
+
+  # ── Full Active Scan (active attacks, ~15-30 mins) ──────────────────────
+  full:
+    name: ZAP Full Active Scan
+    runs-on: ubuntu-latest
+    if: ${{ inputs.scan_type == 'full' || inputs.scan_type == 'both' }}
+
+    services:
+      juice-shop:
+        image: bkimminich/juice-shop:latest
+        ports:
+          - 3000:3000
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Wait for Juice Shop
+        run: |
+          echo "Waiting for Juice Shop to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000 > /dev/null; then
+              echo "Juice Shop is up!"
+              break
+            fi
+            echo "Attempt $i: not ready yet, waiting 5s..."
+            sleep 5
+          done
+
+      - name: Fix workspace permissions for ZAP
+        run: chmod a+w ${{ github.workspace }}
+
+      - name: ZAP Full Active Scan
+        uses: zaproxy/action-full-scan@v0.10.0
+        continue-on-error: true
+        with:
+          target: 'http://localhost:3000'
+          fail_action: false
+          allow_issue_writing: false
+
+      - name: Upload Full Scan Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-full-reports
           path: |
             report_html.html
             report_json.json
