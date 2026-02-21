@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Song of the Day</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #f5efe6;
+    --dark: #1a1209;
+    --amber: #c8882a;
+    --amber-light: #e8a83a;
+    --rust: #8b3a1a;
+    --muted: #7a6a55;
+  }
+
+  body {
+    background-color: var(--dark);
+    color: var(--cream);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -40%; right: -20%;
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: repeating-radial-gradient(
+      circle at center,
+      transparent 0, transparent 18px,
+      rgba(200,136,42,0.04) 18px, rgba(200,136,42,0.04) 19px
+    );
+    animation: spin 40s linear infinite;
+    pointer-events: none; z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -30%; left: -15%;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    background: repeating-radial-gradient(
+      circle at center,
+      transparent 0, transparent 14px,
+      rgba(200,136,42,0.03) 14px, rgba(200,136,42,0.03) 15px
+    );
+    animation: spin 55s linear infinite reverse;
+    pointer-events: none; z-index: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .container {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 860px;
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    animation: fadeUp 1s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .label {
+    grid-column: 1 / -1;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.5rem;
+    animation: fadeUp 1s 0.1s ease both;
+  }
+
+  .record-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 2rem 2rem 0;
+    animation: fadeUp 1s 0.2s ease both;
+  }
+
+  .record {
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    position: relative;
+    animation: spin 8s linear infinite;
+    animation-play-state: paused;
+    cursor: pointer;
+    transition: filter 0.3s;
+    flex-shrink: 0;
+  }
+  .record:hover { filter: brightness(1.1); }
+  .record.playing { animation-play-state: running; }
+
+  .record-disc {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(
+      #0d0d0d 0deg, #1c1409 45deg, #0d0d0d 90deg, #1c1409 135deg,
+      #0d0d0d 180deg, #1c1409 225deg, #0d0d0d 270deg, #1c1409 315deg, #0d0d0d 360deg
+    );
+    box-shadow: 0 0 0 2px #2a1f0a, 0 0 40px rgba(200,136,42,0.15), 0 20px 60px rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .record-groove {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: repeating-radial-gradient(
+      circle at center,
+      transparent 0, transparent 6px,
+      rgba(255,255,255,0.02) 6px, rgba(255,255,255,0.02) 6.5px
+    );
+  }
+
+  .record-label {
+    width: 74px; height: 74px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--amber) 0%, var(--rust) 100%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  }
+  .record-label::after {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--dark);
+  }
+
+  .info {
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 2rem 0 2rem 2rem;
+    border-left: 1px solid rgba(200,136,42,0.2);
+    animation: fadeUp 1s 0.3s ease both;
+  }
+
+  .song-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    line-height: 1.1;
+    color: var(--cream);
+    margin-bottom: 0.4rem;
+  }
+
+  .song-artist {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    color: var(--amber);
+    margin-bottom: 1.5rem;
+  }
+
+  .song-meta {
+    display: flex; gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .meta-item { display: flex; flex-direction: column; gap: 0.2rem; }
+
+  .meta-key {
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .meta-val { font-size: 0.78rem; color: var(--cream); }
+
+  .divider {
+    width: 40px; height: 1px;
+    background: var(--amber);
+    margin-bottom: 1.5rem;
+    opacity: 0.5;
+  }
+
+  .description {
+    font-size: 0.78rem;
+    line-height: 1.75;
+    color: #9e8c72;
+    margin-bottom: 1.8rem;
+    max-width: 340px;
+  }
+
+  .controls { display: flex; align-items: center; gap: 1rem; }
+
+  .play-btn {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid var(--amber);
+    background: transparent;
+    color: var(--amber);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s, transform 0.15s;
+    font-size: 1rem;
+  }
+  .play-btn:hover { background: var(--amber); color: var(--dark); transform: scale(1.08); }
+  .play-btn:active { transform: scale(0.95); }
+
+  .progress-wrap { flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
+
+  .progress-bar {
+    width: 100%; height: 2px;
+    background: rgba(200,136,42,0.2);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative; overflow: visible;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--amber), var(--amber-light));
+    border-radius: 2px;
+    width: 0%;
+    position: relative;
+  }
+  .progress-fill::after {
+    content: '';
+    position: absolute; right: -4px; top: 50%;
+    transform: translateY(-50%);
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--amber-light);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .progress-bar:hover .progress-fill::after { opacity: 1; }
+
+  .time-row {
+    display: flex; justify-content: space-between;
+    font-size: 0.6rem; color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .genre-tag {
+    display: inline-block;
+    border: 1px solid rgba(200,136,42,0.35);
+    color: var(--amber);
+    font-size: 0.6rem; letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.7rem;
+    border-radius: 2px;
+    margin-right: 0.5rem; margin-bottom: 1rem;
+  }
+
+  .bottom-row {
+    grid-column: 1 / -1;
+    margin-top: 1.5rem; padding-top: 1.5rem;
+    border-top: 1px solid rgba(200,136,42,0.1);
+    display: flex; align-items: center; justify-content: space-between;
+    animation: fadeUp 1s 0.4s ease both;
+  }
+
+  .date-display {
+    font-size: 0.62rem; letter-spacing: 0.15em;
+    color: var(--muted); text-transform: uppercase;
+  }
+
+  .next-label {
+    font-size: 0.62rem; letter-spacing: 0.12em;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .next-label span { color: var(--amber); }
+
+  .waveform { display: flex; align-items: center; gap: 2px; height: 20px; }
+  .wave-bar {
+    width: 2px; background: var(--amber);
+    border-radius: 2px; opacity: 0.4;
+    animation: wave 1.2s ease-in-out infinite;
+  }
+  .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+  .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+  .wave-bar:nth-child(4) { animation-delay: 0.05s; }
+  .wave-bar:nth-child(5) { animation-delay: 0.15s; }
+  .wave-bar:nth-child(6) { animation-delay: 0.25s; }
+  .wave-bar:nth-child(7) { animation-delay: 0.08s; }
+
+  @keyframes wave {
+    0%, 100% { height: 4px; }
+    50% { height: 16px; }
+  }
+  .waveform.paused .wave-bar { animation-play-state: paused; }
+
+  @media (max-width: 600px) {
+    .container { grid-template-columns: 1fr; }
+    .record-wrap { padding: 1rem 0; }
+    .info { padding: 1.5rem 0 0; border-left: none; border-top: 1px solid rgba(200,136,42,0.2); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="label">🎵 Song of the Day</div>
+
+  <div class="record-wrap">
+    <div class="record" id="record">
+      <div class="record-disc">
+        <div class="record-groove"></div>
+        <div class="record-label"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info">
+    <div id="genreTags"></div>
+    <h1 class="song-title" id="songTitle">—</h1>
+    <div class="song-artist" id="songArtist">—</div>
+    <div class="divider"></div>
+    <div class="song-meta">
+      <div class="meta-item">
+        <span class="meta-key">Album</span>
+        <span class="meta-val" id="metaAlbum">—</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-key">Year</span>
+        <span class="meta-val" id="metaYear">—</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-key">Duration</span>
+        <span class="meta-val" id="metaDuration">—</span>
+      </div>
+    </div>
+    <p class="description" id="songDesc">—</p>
+    <div class="controls">
+      <button class="play-btn" id="playBtn">▶</button>
+      <div class="progress-wrap">
+        <div class="progress-bar" id="progressBar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="time-row">
+          <span id="timeElapsed">0:00</span>
+          <span id="timeTotal">—</span>
+        </div>
+      </div>
+      <div class="waveform paused" id="waveform">
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <span class="date-display" id="dateDisplay"></span>
+    <span class="next-label" id="nextLabel"></span>
+  </div>
+</div>
+
+<script>
+  // Index 0 = Sunday, 1 = Monday … 6 = Saturday
+  const songs = [
+    {
+      title: "Blue in Green",
+      artist: "Miles Davis",
+      album: "Kind of Blue",
+      year: 1959,
+      genre: ["Jazz", "Modal"],
+      desc: "Barely five minutes, yet Blue in Green contains more silence than most albums dare. Miles Davis distilled melancholy into pure atmosphere — each note placed with the care of a poet choosing a single word.",
+      itunesQuery: "Blue in Green Miles Davis"
+    },
+    {
+      title: "Moon River",
+      artist: "Henry Mancini",
+      album: "Breakfast at Tiffany's OST",
+      year: 1961,
+      genre: ["Jazz", "Classic"],
+      desc: "A timeless gem of American popular music, Moon River drifts like a lazy afternoon current — wistful, golden, and impossibly tender. Its two dreamers chasing the horizon is a mood that never ages.",
+      itunesQuery: "Moon River Henry Mancini"
+    },
+    {
+      title: "Electric Feel",
+      artist: "MGMT",
+      album: "Oracular Spectacular",
+      year: 2007,
+      genre: ["Indie", "Psych-Pop"],
+      desc: "Shimmering bass grooves and hazy synths converge into something irresistible. Electric Feel sounds like a summer night that refuses to end — charged, cosmic, and just a little bit dangerous.",
+      itunesQuery: "Electric Feel MGMT"
+    },
+    {
+      title: "Redbone",
+      artist: "Childish Gambino",
+      album: "Awaken, My Love!",
+      year: 2016,
+      genre: ["Soul", "Funk"],
+      desc: "Channeling Bootsy Collins and Parliament through a modern sensibility, Redbone is a slow-burning funk odyssey soaked in paranoia and longing. It demands to be played loud in the dark.",
+      itunesQuery: "Redbone Childish Gambino"
+    },
+    {
+      title: "La Vie en Rose",
+      artist: "Édith Piaf",
+      album: "La Vie en Rose",
+      year: 1947,
+      genre: ["Chanson", "Classic"],
+      desc: "Perhaps the most romantic song ever recorded. Piaf's voice carries the full weight of Paris — its cobblestones, its cafés, its impossible loves. To hear it is to fall a little bit in love yourself.",
+      itunesQuery: "La Vie en Rose Edith Piaf"
+    },
+    {
+      title: "Midnight City",
+      artist: "M83",
+      album: "Hurry Up, We're Dreaming",
+      year: 2011,
+      genre: ["Synth-Pop", "Dream"],
+      desc: "An anthem for empty streets and blazing skyscraper lights. Midnight City transforms urban loneliness into something euphoric — a saxophone outro that arrives like a revelation from the neon fog.",
+      itunesQuery: "Midnight City M83"
+    },
+    {
+      title: "I Was Made for Lovin' You",
+      artist: "KISS",
+      album: "Dynasty",
+      year: 1979,
+      genre: ["Disco-Rock", "Pop"],
+      desc: "The unlikely marriage of glam rock and disco that somehow works perfectly. An undeniable groove wrapped in electric guitar excess — proof that pop euphoria needs no apology.",
+      itunesQuery: "I Was Made for Lovin You KISS"
+    }
+  ];
+
+  const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const today = new Date();
+  const dayIndex = today.getDay();
+  const song = songs[dayIndex];
+  const nextDay = DAYS[(dayIndex + 1) % 7];
+
+  // Populate static UI
+  document.getElementById('songTitle').textContent   = song.title;
+  document.getElementById('songArtist').textContent  = song.artist;
+  document.getElementById('metaAlbum').textContent   = song.album;
+  document.getElementById('metaYear').textContent    = song.year;
+  document.getElementById('metaDuration').textContent = 'Loading…';
+  document.getElementById('songDesc').textContent    = song.desc;
+  document.getElementById('genreTags').innerHTML     = song.genre.map(g => `<span class="genre-tag">${g}</span>`).join('');
+  document.getElementById('dateDisplay').textContent = today.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('nextLabel').innerHTML     = `Next pick: <span>${nextDay}</span>`;
+
+  // Audio engine
+  const audio = new Audio();
+  audio.crossOrigin = 'anonymous';
+  audio.volume = 0.8;
+
+  function fmtTime(s) {
+    if (isNaN(s)) return '0:00';
+    return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+  }
+
+  function setPlaying(on) {
+    document.getElementById('playBtn').textContent = on ? '⏸' : '▶';
+    document.getElementById('record').classList.toggle('playing', on);
+    document.getElementById('waveform').classList.toggle('paused', !on);
+  }
+
+  audio.addEventListener('timeupdate', () => {
+    const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('timeElapsed').textContent = fmtTime(audio.currentTime);
+  });
+
+  audio.addEventListener('loadedmetadata', () => {
+    document.getElementById('timeTotal').textContent = fmtTime(audio.duration);
+    document.getElementById('metaDuration').textContent = fmtTime(audio.duration) + ' preview';
+  });
+
+  audio.addEventListener('ended', () => {
+    setPlaying(false);
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('timeElapsed').textContent = '0:00';
+    audio.currentTime = 0;
+  });
+
+  audio.addEventListener('error', () => {
+    document.getElementById('metaDuration').textContent = 'Preview unavailable';
+    setPlaying(false);
+  });
+
+  // Fetch iTunes 30s preview via JSONP
+  function fetchPreview(query) {
+    return new Promise(resolve => {
+      const cb = 'itcb_' + Date.now();
+      const s  = document.createElement('script');
+      s.src = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=5&callback=${cb}`;
+      window[cb] = data => {
+        delete window[cb]; s.remove();
+        const track = data.results && data.results.find(r => r.previewUrl);
+        resolve(track ? track.previewUrl : null);
+      };
+      s.onerror = () => { delete window[cb]; s.remove(); resolve(null); };
+      document.head.appendChild(s);
+    });
+  }
+
+  fetchPreview(song.itunesQuery).then(url => {
+    if (url) {
+      audio.src = url;
+      audio.load();
+    } else {
+      document.getElementById('metaDuration').textContent = 'Preview unavailable';
+    }
+  });
+
+  document.getElementById('playBtn').addEventListener('click', async () => {
+    if (!audio.src) return;
+    if (audio.paused) {
+      try { await audio.play(); setPlaying(true); } catch(e) {}
+    } else {
+      audio.pause(); setPlaying(false);
+    }
+  });
+
+  document.getElementById('progressBar').addEventListener('click', e => {
+    if (!audio.duration) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+  });
+</script>
+</body>
+</html>

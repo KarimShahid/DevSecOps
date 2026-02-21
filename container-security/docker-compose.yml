@@ -1,0 +1,10 @@
+services:
+  song-of-the-day:
+    image: karimshahid/song-of-the-day:1.0
+    build:
+      context: .
+    platform: linux/amd64
+    container_name: song-of-the-day
+    ports:
+      - 80:80
+    restart: unless-stopped
