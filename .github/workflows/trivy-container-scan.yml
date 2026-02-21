@@ -1,4 +1,4 @@
-name: Trivy Container Security Scan
+name: "Trivy: Container Security Scan"
 
 on:
   # push:
@@ -27,6 +27,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: List files Trivy will scan        # to see which files are included/excluded
+        run: find container-security/ -type f
 
       - name: Scan container-security/ (Table Output)
         uses: aquasecurity/trivy-action@master
