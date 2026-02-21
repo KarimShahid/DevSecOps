@@ -1,0 +1,59 @@
+name: "Trivy: IaC Scan"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'sast/aws.yaml'         # Only trigger when aws.yaml changes
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'sast/aws.yaml'
+  workflow_dispatch:             # Allow manual trigger
+
+jobs:
+  trivy-iac-scan:
+    name: Trivy - Scan aws.yaml
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy Config Scanner (Table Output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config                   # IaC / misconfiguration scan
+          scan-ref: sast/aws.yaml             # Target file
+          format: table                       # Human-readable output in logs
+          severity: LOW,MEDIUM,HIGH,CRITICAL  # Report all severities
+          exit-code: 0                        # Don't fail here, just show results
+
+      - name: Run Trivy - Generate JSON Report
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: sast/aws.yaml
+          format: json
+          output: trivy-results.json
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: 0
+
+      - name: Upload JSON Report as Artifact
+        uses: actions/upload-artifact@v4
+        if: always()                          # Upload even if scan finds issues
+        with:
+          name: trivy-scan-report
+          path: trivy-results.json
+          retention-days: 30
+
+      - name: Fail Pipeline on CRITICAL or HIGH Findings
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: sast/aws.yaml
+          format: table
+          severity: HIGH,CRITICAL             # Only fail for HIGH and CRITICAL
+          exit-code: 1                        # Fail the pipeline if found
